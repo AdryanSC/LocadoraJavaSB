@@ -1,9 +1,10 @@
 package br.com.unisales.locadora.controller;
 
 import br.com.unisales.locadora.model.Usuario;
+import br.com.unisales.locadora.repository.UsuarioRepository;
 import br.com.unisales.locadora.service.UsuarioService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
@@ -15,7 +16,10 @@ public class UsuarioController {
     private UsuarioService service;
 
     @Autowired
-    private JdbcTemplate jdbcTemplate;
+    private UsuarioRepository repository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @PostMapping
     public Usuario cadastrar(@RequestBody Usuario usuario) {
@@ -24,20 +28,11 @@ public class UsuarioController {
 
     @PostMapping("/login")
     public String login(@RequestBody Usuario loginDados) {
-        System.out.println("Tentativa de acesso ao sistema detectado.");
-        String sql = "SELECT username FROM usuario WHERE username = '"
-                + loginDados.getUsername() + "' AND password = '"
-                + loginDados.getPassword() + "'";
-        try {
-            List<String> usuarios = jdbcTemplate.queryForList(sql, String.class);
-            if (!usuarios.isEmpty()) {
-                return "Login realizado! Bem-vindo, " + usuarios.get(0);
-            } else {
-                return "Usuário ou senha incorretos.";
-            }
-        } catch (Exception e) {
-            return "Erro no banco: " + e.getMessage();
+        Usuario usuario = repository.findByUsername(loginDados.getUsername());
+        if (usuario != null && passwordEncoder.matches(loginDados.getPassword(), usuario.getPassword())) {
+            return "Login realizado! Bem-vindo, " + usuario.getUsername();
         }
+        return "Usuário ou senha incorretos.";
     }
 
     @GetMapping("/{id}")
